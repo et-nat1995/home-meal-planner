@@ -23,7 +23,7 @@ Proposed validation: use the planner for four consecutive weeks; record how long
 ### First usable release
 
 1. Create, edit, search, and archive family recipes, including manually entered recipes.
-2. Plan dinner Monday through Thursday for a chosen week; manually assign, replace, clear, or add a meal to a day.
+2. Show a seven-day week with automatic Shabbat and Jewish holiday identification; plan dinner Monday through Thursday and manually assign, replace, or clear a meal.
 3. Automatically prepare a draft plan each Sunday from eligible library recipes, using family ratings where available. Provide the groundwork for future editable characteristics and weighted filters; the exact scoring design is deferred. Let users review and change the draft before finalizing.
 4. Generate a ready-to-use shopping list from the finalized plan, combine compatible ingredient quantities, and let users mark what they already have, organize what remains by shopping category, and check items off while shopping.
 5. Provide a secure AI-assisted recipe intake path and manual entry so source material can become reviewable, structured recipe records. The exact integration, supported source types, and rollout order require design; do not assume access to prior conversations or direct database access.
@@ -33,7 +33,7 @@ AI-assisted intake is desired, but its integration and supported sources need in
 
 ### Later / discovery
 
-- Shabbat and chagim: the MVP weekly view accounts for these days or occasions, but detailed planning of meals, guests, dishes, and advance preparation comes later. No automatic religious calendar or rules are assumed.
+- Shabbat and chagim: automatic calendar identification is in the MVP; detailed planning of meals, guests, dishes, and advance preparation comes later.
 - A public, unauthenticated, read-only recipe library is desired later; private household data must never become public. Publication scope, source rights, and presentation need design. Broader multiple-household support, dietary and kosher rules, pantry inventory, grocery delivery, nutrition, and automated scheduling are uncommitted.
 
 ## 4. Core journeys and requirements
@@ -57,7 +57,7 @@ Each imported or manually entered recipe is stored in the app in one consistent,
 
 ### Weekly planning
 
-A week is identified by its local Monday date. Show one recipe or free-form dinner entry for each Monday–Thursday slot. Multiple recipe dishes per dinner and automatic serving scaling are later features; use the recipe’s initially entered quantities for the MVP. Each recipe dinner links to its stored ingredients and steps. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A free-form note such as “kids have pizza” does not create shopping ingredients automatically; the family can add them manually. Show the full week so Shabbat and chagim have a place in the view; detailed occasion planning and automatic holiday identification are future work. Maintain previous weeks for reference.
+A week is identified by its local Monday date. Show one recipe or free-form dinner entry for each Monday–Thursday slot. Multiple recipe dishes per dinner and automatic serving scaling are later features; use the recipe’s initially entered quantities for the MVP. Each recipe dinner links to its stored ingredients and steps. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A free-form note such as “kids have pizza” does not create shopping ingredients automatically; the family can add them manually. Show all seven days and automatically identify Shabbat and Jewish holidays, including holidays that fall on weekdays. Shabbat should be visible for Friday evening and Saturday; label holiday dates and the preceding evening so the meal-planning view does not suggest that an occasion begins at midnight. Identify overlapping and multi-day occasions without hiding either label. Detailed occasion planning is future work. Maintain previous weeks for reference.
 
 **Sunday workflow:**
 
@@ -87,7 +87,9 @@ A generated list separates calculated contributions from user additions and over
 
 ### Shabbat and chagim direction
 
-The MVP weekly view makes room for Shabbat and chagim, while detailed occasion planning comes after the Monday–Thursday MVP. The family expects eventually to plan meals, guests, dishes, and advance preparation for Shabbat and chagim. The exact workflow remains to be worked out with real examples. The data model should allow arbitrary dates, named occasions, multiple meal slots (for example Friday dinner and Saturday lunch), courses, guests/servings, and free-form dishes or tasks without a library recipe. A dish may have shopping ingredients, preparation notes, both, or neither. A future prep timeline may link a task to an occasion and intended preparation date. Treat holiday dates, local time zones, observance practices, and calendar integrations as unresolved; no automatic calendar or halachic guidance is promised in the first release.
+The MVP weekly view automatically identifies Shabbat and chagim, while detailed occasion planning comes after the Monday–Thursday MVP. The family expects eventually to plan meals, guests, dishes, and advance preparation for Shabbat and chagim. The exact workflow remains to be worked out with real examples. The data model should allow arbitrary dates, named occasions, multiple meal slots (for example Friday dinner and Saturday lunch), courses, guests/servings, and free-form dishes or tasks without a library recipe. A dish may have shopping ingredients, preparation notes, both, or neither. A future prep timeline may link a task to an occasion and intended preparation date. Use the household’s local time zone and a configurable Israel or diaspora holiday schedule; diaspora is a proposed default for the initial household, subject to confirmation. Decide which minor and modern observances to display during design. Labels show date and evening context, not exact sunset, candle-lighting, or ending times. Do not infer observance restrictions or automatically suppress dinner suggestions solely from a calendar label without a product decision. Consider [Hebcal’s calendar API or JavaScript library](https://www.hebcal.com/home/developer-apis), subject to integration and attribution requirements. If calendar data is unavailable, make that visible rather than implying there are no holidays.
+
+**MVP acceptance:** navigating any seven-day week shows Shabbat on Friday evening and Saturday, identifies relevant holidays across weekdays and multi-day or overlapping dates, and uses the configured Israel or diaspora schedule. A calendar failure is visible; ordinary meal planning remains usable.
 
 **Future acceptance:** a user can plan an occasion in advance, include a dish with no recipe, and add its known ingredients to the occasion's shopping list without fabricating a recipe.
 
@@ -102,6 +104,7 @@ Proposed core entities:
 - **Recipe, recipe ingredient, source:** editable library record and original source; archive instead of deleting referenced data.
 - **Recipe preference, characteristics, and weekly planning input:** adult 1–5 and kids’ yes/no ratings; unknown ratings stay unknown. Extensible characteristics and future weekly filters; weighting is open.
 - **Plan, meal slot, planned item:** dated slots, recipe references or free-form items, servings, and lock state; plan lifecycle includes draft and finalized. Active plans follow recipe updates; retain historical versions for past weeks.
+- **Calendar settings:** household time zone and Israel/diaspora schedule; source and event-display preferences as needed.
 - **Scheduled generation:** a time-zone-aware Sunday noon job with retry/idempotency and failure visibility; must preserve household edits and finalized plans.
 - **Shopping list, calculated contribution, manual item, category, on-hand and shopping check state:** derived ingredient contributions and user changes kept distinct.
 - **Import draft and asset:** extraction status, editable result, source, and optional retained image; failed or abandoned drafts can be removed.
@@ -135,7 +138,7 @@ Each milestone should be reviewable and committed at a meaningful boundary. No p
 2. How should the two Google identities be provisioned and recovered safely, and which service should handle sign-in?
 3. Which AI intake integration can actually be connected securely, and which sources should it support first? How should recipe drafts be reviewed?
 4. Which recipe characteristics and weighted filters should be added later, and how should conflicting ratings affect suggestions?
-5. What should the weekly view show for Shabbat and chagim before detailed planning exists? Clarify whether to show all seven days with placeholders, or keep the MVP focused on Monday–Thursday.
+5. Confirm the Israel or diaspora holiday schedule and which minor or modern observances should appear. Should holiday labels affect dinner suggestions, or remain informational?
 6. Which hosting, database, scheduler, and AI providers meet the desired low cost and custom-domain needs? Should Sunday generation trigger a notification?
 7. When the public library is prioritized, which recipes and fields should be published, and how should source rights be handled?
 
