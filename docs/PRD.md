@@ -6,7 +6,7 @@
 
 ## 1. Product vision
 
-Make the recurring question “What are we eating this week?” easier to answer. A family collects meals it likes, chooses or generates a Monday–Thursday plan, and gets a shopping list that accounts for shared ingredients. As plans change, the planner and list remain easy to correct. The same foundation should support planning further ahead for Shabbat and chagim without forcing every dish to have a complete recipe.
+Make the recurring question “What are we eating this week?” easier to answer. A family gathers recipes from its various sources into one consistent library. Every Sunday, the app proposes Monday–Thursday dinners using that library and the family’s preferences and current mood. The family adjusts and finalizes the plan, then gets a shopping list that accounts for shared ingredients. As plans change, the planner and list remain easy to correct. The same foundation should support planning further ahead for Shabbat and chagim without forcing every dish to have a complete recipe.
 
 This document proposes a starting point, not settled product policy. Open questions and stack choices need confirmation before implementation.
 
@@ -24,8 +24,8 @@ Proposed validation: use the planner for four consecutive weeks; record how long
 
 1. Create, edit, search, and archive family recipes, including manually entered recipes.
 2. Plan dinner Monday through Thursday for a chosen week; manually assign, replace, clear, or add a meal to a day.
-3. Suggest a plan from eligible recipes while keeping the user in control. A suggestion is a draft until accepted.
-4. Generate a shopping list from the current plan, combine compatible ingredient quantities, and allow corrections, additions, and check-offs.
+3. Automatically prepare a draft plan each Sunday from eligible library recipes, using known family preferences and the current week’s stated mood. Let users review and change it before finalizing.
+4. Generate a ready-to-use shopping list from the finalized plan, combine compatible ingredient quantities, and allow corrections, additions, and check-offs.
 5. Import recipe drafts from website links and images (cookbooks, handwritten recipes, or screenshots), with a review step before saving. Provide paste/manual entry for recipes previously discussed with an assistant; do not assume access to prior conversations.
 6. Support two household members with authenticated access and persist data across visits. Keep household data private. Explore sharing selected recipes separately from the private family space.
 
@@ -40,9 +40,9 @@ The import methods are part of the desired first release, but can be delivered a
 
 ### Recipe library
 
-A recipe has a title, ingredient lines, instructions, optional yield/servings, notes, tags, and source information. Ingredients may include quantity, unit, ingredient name, and preparation notes; retain the original text as well. Support incomplete entries and recipes with no exact quantities, visibly marked as needing attention. Search by name and tags; archive without breaking historical plans. Editing a recipe must not silently change a previously accepted plan or its shopping list: planned meals use an editable snapshot, with an explicit future option to refresh it.
+Each imported or manually entered recipe is stored in the app in one consistent, editable format, with its ingredients and cooking steps available directly from the weekly plan; a source link or image alone is not the recipe. A recipe has a title, ingredient lines, ordered instructions, optional yield/servings, notes, tags, and source information. Ingredients may include quantity, unit, ingredient name, and preparation notes; retain the original text as well. Support incomplete entries and recipes with no exact quantities, visibly marked as needing attention. Search by name and tags; archive without breaking historical plans. Editing a recipe must not silently change a previously accepted plan or its shopping list: planned meals use an editable snapshot, with an explicit future option to refresh it.
 
-**Acceptance:** a user can add a family recipe, find and edit it, and archive it while an existing planned meal remains readable.
+**Acceptance:** a user can import, review, and save a complete recipe, then open its ingredients and steps from a planned dinner without returning to its original source. The user can find and edit a recipe and archive it while an existing planned meal remains readable.
 
 ### Import and review
 
@@ -56,15 +56,21 @@ A recipe has a title, ingredient lines, instructions, optional yield/servings, n
 
 ### Weekly planning
 
-A week is identified by its local Monday date. Show Monday–Thursday dinner slots by default, with room for more than one planned item per slot. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A dinner can combine a free-form note with recipe items when needed; only ingredients explicitly associated with that dinner contribute to shopping. A change is saved and reflected in the shopping list. Maintain previous weeks for reference.
+A week is identified by its local Monday date. Show Monday–Thursday dinner slots by default, with room for more than one planned item per slot. Each recipe dinner links to its stored ingredients and steps. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A dinner can combine a free-form note with recipe items; only ingredients explicitly associated with that dinner contribute to shopping. Maintain previous weeks for reference.
 
-Suggestions choose exclusively from the household’s own non-archived recipe library, with enough information to plan; they never discover or add outside recipes; avoid repeats within the same proposed week when enough candidates exist. Offer individual replacements and preserve user-locked choices when regenerating. If too few recipes exist, fill what is possible and explain the gap. The family curates the library itself; do not infer dietary or kosher restrictions or introduce external recipes. Additional preferences and variety rules remain open.
+**Sunday workflow:**
 
-**Acceptance:** generating, accepting, and overriding a day changes only the intended planned items; locked meals stay in place; the user can always plan manually.
+1. On Sunday, automatically create one draft for the upcoming Monday–Thursday week, using the household’s time zone. Let either household member open the draft, see the recipes for each night, and make changes. The time of day and notification method are open decisions.
+2. The family can record which recipes the kids and adults like, and can provide or update mood or preferences for the coming week. Suggest recipes from the family library using available preferences and that week’s input. Allow unknown preferences; never invent ratings or assume everyone likes a recipe. If mood is entered after automatic generation, let the family regenerate or replace choices with that input. How to represent preferences and balance differing tastes needs design.
+3. Replace individual dinners, add notes, or lock choices before regenerating. Avoid repeats within the proposed week when enough candidates exist. If too few recipes are available, fill what is possible and explain the gap. Users can always plan manually.
+4. When satisfied, explicitly finalize the plan and generate its shopping list. Finalization does not prevent later changes: allow an override, update affected calculated list contributions, and clearly flag items needing review.
 
+Suggestions draw exclusively from the household’s own non-archived recipe library; they never discover or add outside recipes. The family curates the library; do not infer dietary or kosher restrictions. Automatic generation must be safe to retry, create no duplicate weekly drafts, and never overwrite a finalized plan or the family’s edits. If it fails or has insufficient input, show the issue and allow manual generation or planning.
+
+**Acceptance:** on Sunday, a draft for the coming week appears without manual initiation; each selected recipe opens its stored ingredients and steps. Known likes and supplied mood can influence suggestions, while missing preferences remain unknown. Either user can change a day or regenerate without losing locked choices. Finalizing produces the shopping list, and a later override updates it while preserving user changes and flagging affected items.
 ### Shopping list
 
-Generate a list from the current accepted planned meal snapshots and selected servings. Each ingredient line retains its source meal, original quantity and unit, and a normalized ingredient identity where known. Sum quantities only when ingredient identity and units are compatible; convert within a supported, explicit unit family (for example, teaspoons to tablespoons) using exact or documented conversions. Do not automatically convert volume to weight, merge ambiguous names, or invent quantities. Show unresolved lines separately for review, including “to taste” or missing quantities. Support fractional quantities and round only for display, preserving underlying precision.
+Generate the ready-to-use list when the family finalizes the week, from its planned meal snapshots and selected servings. A draft may show a preview, but it must be clearly distinguished from the finalized list. Each ingredient line retains its source meal, original quantity and unit, and a normalized ingredient identity where known. Sum quantities only when ingredient identity and units are compatible; convert within a supported, explicit unit family (for example, teaspoons to tablespoons) using exact or documented conversions. Do not automatically convert volume to weight, merge ambiguous names, or invent quantities. Show unresolved lines separately for review, including “to taste” or missing quantities. Support fractional quantities and round only for display, preserving underlying precision.
 
 A generated list separates calculated contributions from user additions and overrides. Users can add an item, edit or exclude a calculated item, and check items off. When a meal changes, recalculate calculated contributions, preserve manual items, and flag overrides or check-offs affected by changed quantities for review rather than silently discarding them. Display which meals contribute to an item. Pantry subtraction and package-size rounding are future decisions, not assumptions.
 
@@ -90,7 +96,9 @@ Proposed core entities:
 - **User, household, and membership:** separate identities and a private ownership/access boundary for the two initial users; extensible to more.
 - **Recipe sharing grant or share link (future):** explicitly scoped access to selected recipes, separate from household membership; sharing mechanism and permissions remain undecided.
 - **Recipe, recipe ingredient, source:** editable library record and original source; archive instead of deleting referenced data.
-- **Plan, meal slot, planned item:** dated slots and recipe snapshots or free-form items, with servings and lock state.
+- **Recipe preference and weekly planning input:** household-recorded kids’ and adults’ likes and optional current-week mood; unknown values stay unknown. Representation and weighting are open.
+- **Plan, meal slot, planned item:** dated slots and recipe snapshots or free-form items, with servings and lock state; plan lifecycle includes draft and finalized.
+- **Scheduled generation:** a time-zone-aware Sunday job with retry/idempotency and failure visibility; must preserve household edits and finalized plans.
 - **Shopping list, calculated contribution, manual item, override/check state:** derived ingredient contributions and user changes kept distinct.
 - **Import draft and asset:** extraction status, editable result, source, and optional retained image; failed or abandoned drafts can be removed.
 - **Occasion and prep task:** future extensions linked to dates and meal slots.
@@ -111,7 +119,7 @@ The backend owns access checks, persistence, import orchestration, ingredient no
 
 1. **Foundation:** resolve product questions and record architecture decisions; set up application, database, auth, and deployment approach.
 2. **Vertical slice:** manual recipes → manually editable weekly plan → accurate, traceable shopping list. Verify core arithmetic and update behavior with automated tests.
-3. **Suggestions and imports:** add draft generation, locks, image and website import, and explicit failure/review paths. Investigate YouTube import feasibility and timing. Test with representative real family recipes and images.
+3. **Suggestions and imports:** add preference and mood inputs, scheduled Sunday draft generation, finalization, locks, image and website import, and explicit failure/review paths. Investigate YouTube import feasibility and timing. Test with representative real family recipes and images.
 4. **Household trial:** use for several weeks, collect corrections and friction, and prioritize improvements.
 5. **Occasion planning:** design Shabbat and chagim workflows with the family based on actual examples before implementation.
 
@@ -127,6 +135,8 @@ Each milestone should be reviewable and committed at a meaningful boundary. No p
 6. Can representative cookbook photos, handwriting, screenshots, website links, YouTube videos, and pasted assistant recipes be supplied for import evaluation? Is video import required for the first release?
 7. What are the preferences for hosting, ongoing cost, data location, and AI providers?
 8. Is editing a recipe after planning intended to update existing plans, or is the proposed snapshot behavior preferable?
+9. How should the family record kids’ and adults’ likes, and what form should the weekly mood take? How should conflicting preferences be balanced?
+10. What time on Sunday should the draft be ready, and should the app send a notification? How should the household time zone be configured?
 
 ## 9. Handoff
 
