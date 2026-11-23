@@ -59,6 +59,8 @@ Each imported or manually entered recipe is stored in the app in one consistent,
 
 A week is identified by its local Monday date. Show one recipe or free-form dinner entry for each Monday–Thursday slot. Multiple recipe dishes per dinner and automatic serving scaling are later features; use the recipe’s initially entered quantities for the MVP. Each recipe dinner links to its stored ingredients and steps. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A free-form note such as “kids have pizza” does not create shopping ingredients automatically; the family can add them manually. Show all seven days and automatically identify Shabbat and Jewish holidays, including holidays that fall on weekdays. Shabbat should be visible for Friday evening and Saturday; label holiday dates and the preceding evening so the meal-planning view does not suggest that an occasion begins at midnight. Identify overlapping and multi-day occasions without hiding either label. Detailed occasion planning is future work. Maintain previous weeks for reference.
 
+**Confirmed lifecycle decision:** A week remains editable until 12:00 a.m. on the following Monday in the household’s configured time zone. It then becomes historical and read-only. Preserve its plan, recipe content, and shopping-list state as they stood at that cutoff; later recipe edits must not rewrite them. Future weeks remain editable before their own cutoff.
+
 **Sunday workflow:**
 
 1. On Sunday at noon in the household’s configured time zone, automatically create one draft for the upcoming Monday–Thursday week. Let either household member open the draft, see the recipes for each night, and make changes. Notifications are undecided; the draft remains available on the website.
@@ -76,6 +78,8 @@ Generate the ready-to-use list when the family finalizes the week, from its curr
 Start with all ingredients needed, then let the family mark whole items already on hand or manually edit a quantity; if what is on hand is insufficient, they can leave the full amount to buy. Keep that review state distinct from items checked off during shopping. Group the list into Protein, Carb, Dairy, Veg, Fruit, and Misc; allow a user to correct an item’s category and default uncertain items to Misc. Do not require pantry tracking, automated partial-quantity subtraction, or package-size calculations.
 
 A generated list separates calculated contributions from user additions and overrides. Users can add an item, edit or exclude a calculated item, and check items off. When a meal changes, recalculate calculated contributions, preserve manual items, and flag overrides or check-offs affected by changed quantities for review rather than silently discarding them. Display which meals contribute to an item. Persistent pantry inventory and package-size rounding are future decisions, not assumptions.
+
+**Confirmed update decision:** Changes to recipes used in editable weeks and changes to finalized plans automatically update affected calculated shopping-list contributions. When a quantity change affects an on-hand or checked-off item, retain its previous state for context and mark it as needing review; do not present it as conclusively covered or purchased until a household member resolves the review. How overrides and review states behave when groups merge or split remains open.
 
 **Acceptance examples:**
 

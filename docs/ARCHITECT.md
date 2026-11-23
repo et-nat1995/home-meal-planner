@@ -9,7 +9,7 @@
 
 **Ready to begin architecture design and focused technical discovery. Not yet ready for an unrestricted implementation or production launch.** The PRD identifies the users, primary journey, scope boundaries, useful acceptance examples, and meaningful privacy and reliability constraints. It also names a plausible deployment shape. There is no application code or existing architecture in this repository to constrain the design.
 
-The manual vertical slice can be specified first, but its implementation should follow decisions on identity and access, plan/history boundaries, and list reconciliation. Scheduled suggestions, calendar display, and AI intake each need additional decisions or feasibility work before their respective implementation. These gates need not all be resolved before architecture work begins.
+The manual vertical slice can be specified first, but implementation should follow decisions on identity and access and the remaining list reconciliation details. The history cutoff and read-only policy are confirmed below. Scheduled suggestions, calendar display, and AI intake each need additional decisions or feasibility work before their respective implementation. These gates need not all be resolved before architecture work begins.
 
 ### PRD audit
 
@@ -17,7 +17,7 @@ The manual vertical slice can be specified first, but its implementation should 
 | --- | --- | --- |
 | Users and outcome | Strong for a household trial | Two household members, private planning, and a four-week qualitative validation are defined. Numeric targets are intentionally deferred until a baseline exists. |
 | First journey and scope | Mostly clear | Manual recipes, four dinner slots, finalization, and a traceable list form a coherent slice. The milestones place finalization after the vertical slice, although the list is defined as generated on finalization; resolve sequencing below. |
-| Recipe and plan lifecycle | Needs a decision | Edits update active plans while past weeks remain historical, but the cutoff and behavior when an old week is reopened are unspecified. |
+| Recipe and plan lifecycle | Cutoff and read-only policy confirmed | Editable weeks follow recipe edits; each becomes historical at the following local Monday midnight and is read-only. Snapshot implementation and archive behavior still need design. |
 | Shopping list | Needs a detailed contract | Good arithmetic examples and preservation requirements exist; item identity, conflicts, and review resolution across recalculation are not specified. |
 | Identity and privacy | Architecture direction clear; launch policy open | Two authorized identities and server enforcement are required. Provisioning, recovery, session behavior, and provider remain open. |
 | Suggestions and scheduling | Needs product and operational decisions | Time zone, idempotency, locks, and no-overwrite behavior are stated; rating policy, retries, missed schedules, and partially edited drafts need precise rules. |
@@ -36,7 +36,7 @@ Two authorized household members maintain a private recipe library, assemble a M
 - Only authorized household members can use private features; enforcement occurs on the server for every operation. Household data is private by default.
 - A week is identified by its local Monday. There is at most one weekly plan for the household; the Sunday run targets the upcoming week. A finalized plan or a household member's edits must never be overwritten by automatic generation.
 - Recipes are stored as editable content, not just external links; archived recipes remain readable in referenced plans. Unknown ratings and quantities remain unknown.
-- Active plans reflect recipe changes; historical weeks retain their records. The exact transition into history is a decision gate.
+- Editable weeks reflect recipe changes. At 12:00 a.m. on the following Monday in the household’s configured time zone, a week becomes historical and read-only; its plan, recipe content, and list state remain as of the cutoff.
 - Sum only confidently identical ingredients in compatible units. Preserve source lines and precision; do not infer volume-to-weight conversion or quantities. Keep ambiguous entries separate.
 - Calculated shopping contributions and user changes are distinct. Recalculation preserves manual items and flags affected overrides, on-hand states, and check-offs for review.
 - External content is untrusted. Extracted recipes are drafts until reviewed and saved; failure has a manual fallback.
@@ -92,7 +92,7 @@ All private business records carry or derive a household ownership boundary. Pro
 1. A household member creates or edits recipes and enters or changes a draft plan. A draft may display a clearly labeled list preview.
 2. Finalization records the current plan and produces its shopping list atomically. Finalization is explicit and does not lock future edits.
 3. A later plan or active recipe edit recomputes affected contributions and marks affected user states for review in the same transaction. Manual items survive.
-4. A defined transition makes a week historical and preserves the recipe content and list state needed to read it later. **The transition time, late corrections, and whether historical edits create an audit revision are open decisions.** Do not silently interpret “active” as “current week” without confirmation.
+4. At 12:00 a.m. on the Monday following the planned week, in the household’s configured time zone, that week becomes historical and read-only. Preserve the plan, recipe content, and shopping-list state as of the cutoff. Future weeks remain editable before their own cutoff. The implementation must enforce the boundary even if snapshot processing is delayed; the snapshot mechanism remains a design choice.
 
 **Proposed concurrency rule:** use a plan/list revision or equivalent optimistic concurrency check. A stale edit receives a conflict and can be refreshed or reconciled rather than silently overwriting another member's work. Finalization and subsequent recalculation should be transactional; retries must not create duplicate plans or lists.
 
@@ -104,7 +104,9 @@ All private business records carry or derive a household ownership boundary. Pro
 4. Aggregate calculated contributions into displayed list items with source meals. Apply manual additions, exclusions, quantity overrides, category corrections, on-hand state, and shopping check state separately. On-hand and purchased are distinct states.
 5. On change, recompute from source contributions. Compare prior and new group membership and quantities; retain manual entries and flag affected user states for review. The UI must show enough old/new context for the family to resolve a change without silently losing its edits.
 
-**Decision required before building reconciliation:** define durable item identity when lines merge or split; what an override means after recalculation; whether affected checks/on-hand states are retained provisionally or cleared; and how the user resolves flags. This contract deliberately does not imply that preserving a flag is equivalent to preserving the user's intent.
+**Confirmed:** When a quantity change affects a checked or on-hand item, retain its prior state for context and mark it as needing review. Do not present it as conclusively purchased or covered until a household member resolves the review.
+
+**Decision required before building reconciliation:** define durable item identity when lines merge or split, what an override means after recalculation, how prior states carry across changed groups, and how the user resolves flags. This contract deliberately does not imply that preserving a flag is equivalent to preserving the user's intent.
 
 ## 6. Scheduled suggestions and calendar
 
@@ -127,8 +129,8 @@ Calendar calculations should take local dates, configured time zone, Israel/dias
 | --- | --- | --- |
 | Before foundation implementation | Choose framework, hosting, database, auth provider, and deployment environment; agree budget and custom-domain needs. | Determines infrastructure, identity integration, and operational model. |
 | Before private data or launch | Define the two account identifiers, secure bootstrap, recovery, revocation and shared-device behavior. | Prevents accidental lockout or unauthorized access. |
-| Before plan/list implementation | Define when a week becomes historical, snapshot contents, late edits, and behavior when recipes are archived or changed. | Resolves active-update versus historical-record requirements. |
-| Before list reconciliation | Specify merge/split identity, override semantics, on-hand/check behavior and review resolution, with examples. | Makes preservation and recalculation testable. |
+| Before plan/list implementation | Design cutoff enforcement and snapshots for the confirmed local-Monday, read-only history policy; specify archive behavior. | Preserves the state at the cutoff even when processing is delayed. |
+| Before list reconciliation | Specify merge/split identity, override semantics, prior-state carryover and review resolution, with examples. | Makes preservation and recalculation testable; affected on-hand/check states already require review. |
 | Before concurrent editing | Decide conflict UX and stale-edit recovery for both users. | Prevents silent loss of household edits. |
 | Before suggestions | Decide collective versus individual ratings, balancing of conflicting or absent ratings, eligible recipes, edited-slot protection and regeneration behavior. | Enables a predictable algorithm without inventing preferences. |
 | Before scheduled generation | Select scheduler; define retries, missed runs, time-zone changes, monitoring and recovery. | Establishes the Sunday guarantee and safe retry behavior. |
@@ -148,4 +150,4 @@ Verification should include the PRD's cup-plus-half-cup, volume-versus-weight, o
 
 ## 10. Handoff
 
-**Next action:** review the decision register with the household and choose the initial deployment and identity constraints, history boundary, and list reconciliation examples. Then turn the accepted choices into implementation contracts and small, testable tasks for the manual vertical slice. Keep unresolved product choices visible rather than treating the proposals in this document as approved requirements.
+**Next action:** review the decision register with the household and choose the initial deployment and identity constraints and list reconciliation examples. Then turn the accepted choices into implementation contracts and small, testable tasks for the manual vertical slice. Keep unresolved product choices visible rather than treating the proposals in this document as approved requirements.
