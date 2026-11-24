@@ -1,15 +1,15 @@
 # Family Meal Planner — Architecture and Readiness Audit
 
-**Status:** Proposed architecture for discussion; no implementation or provider choices approved  
+**Status:** Architecture direction accepted in [ADRs 0001–0005](adr/README.md); implementation details and some providers remain unresolved
 **Date:** November 22, 2026  
 **Source:** [Product requirements](PRD.md), draft of November 22, 2026  
 **Scope:** Initial private household and the manual recipe → plan → shopping-list slice, with extension points for the rest of the first release.
 
 ## 1. Readiness verdict
 
-**Ready to begin architecture design and focused technical discovery. Not yet ready for an unrestricted implementation or production launch.** The PRD identifies the users, primary journey, scope boundaries, useful acceptance examples, and meaningful privacy and reliability constraints. It also names a plausible deployment shape. There is no application code or existing architecture in this repository to constrain the design.
+**Ready for focused proof-of-concept foundation work and contract design. Not yet ready for unrestricted implementation or production launch.** The PRD identifies the users, primary journey, scope boundaries, useful acceptance examples, and meaningful privacy and reliability constraints. It also names a plausible deployment shape. There is no application code or existing architecture in this repository to constrain the design.
 
-The manual vertical slice can be specified first, but implementation should follow decisions on identity and access and the remaining list reconciliation details. The history cutoff and read-only policy are confirmed below. Scheduled suggestions, calendar display, and AI intake each need additional decisions or feasibility work before their respective implementation. These gates need not all be resolved before architecture work begins.
+The manual vertical slice can be specified first. Local accounts and server-side membership checks are accepted; the authentication solution and operational policies remain to be chosen. The history cutoff and read-only policy are confirmed below. Scheduled suggestions, calendar display, and AI intake each need additional decisions or feasibility work before their respective implementation. These gates need not all be resolved before architecture work begins.
 
 ### PRD audit
 
@@ -18,8 +18,8 @@ The manual vertical slice can be specified first, but implementation should foll
 | Users and outcome | Strong for a household trial | Two household members, private planning, and a four-week qualitative validation are defined. Numeric targets are intentionally deferred until a baseline exists. |
 | First journey and scope | Mostly clear | Manual recipes, four dinner slots, finalization, and a traceable list form a coherent slice. Finalization is included in the manual vertical slice. |
 | Recipe and plan lifecycle | Cutoff and read-only policy confirmed | Editable weeks follow recipe edits; each becomes historical at the following local Monday midnight and is read-only. Historical recipe content remains preserved under the existing policy; whether to simplify that policy and archive behavior remain open. |
-| Shopping list | Needs a detailed contract | Good arithmetic examples and preservation requirements exist; item identity, conflicts, and review resolution across recalculation are not specified. |
-| Identity and privacy | Architecture direction clear; launch policy open | Two authorized identities and server enforcement are required. Provisioning, recovery, session behavior, and provider remain open. |
+| Shopping list | Needs a detailed contract | Good arithmetic examples and preservation requirements exist; the reconciliation contract below defines item identity and review; list scope and retention remain open. |
+| Identity and privacy | Architecture direction clear; launch policy open | Two authorized identities and server enforcement are required. Local accounts are accepted for the proof of concept; the authentication solution, provisioning, recovery, and session behavior remain open. |
 | Suggestions and scheduling | Needs product and operational decisions | Time zone, idempotency, locks, and no-overwrite behavior are stated; rating policy, retries, missed schedules, and partially edited drafts need precise rules. |
 | Calendar | Needs configuration decisions | Israel/diaspora, observance set, location-based times and conventions are unsettled; failures must remain visible. |
 | Intake and external services | Discovery required | Supported sources, integration feasibility, provider, retention, and costs remain open. Manual entry is viable independently. |
@@ -46,7 +46,7 @@ Two authorized household members maintain a private recipe library, assemble a M
 
 ## 3. Proposed system shape
 
-A responsive web application, one backend, and a relational database are appropriate for the small initial audience and transactional plan/list changes. Next.js with TypeScript and PostgreSQL is a **candidate**, as proposed in the PRD, not a settled decision. Compare it with the stated full-stack alternative and select hosting, database, authentication, and scheduling together before foundation implementation. Avoid separate services until operational or product needs justify them.
+A responsive web application, one backend, and a relational database are appropriate for the small initial audience and transactional plan/list changes. The accepted direction is a modular Next.js application with React and TypeScript, PostgreSQL, and an initial home-network proof of concept on a Raspberry Pi ([ADR-0001](adr/0001-application-and-deployment.md), [ADR-0002](adr/0002-persistence-and-history.md)). Two local accounts are accepted for the proof of concept ([ADR-0003](adr/0003-identity-and-household-access.md)). The local authentication solution, HTTPS and deployment workflow, scheduler, and eventual cloud provider remain unresolved. Avoid separate services until operational or product needs justify them.
 
 ```mermaid
 flowchart LR
@@ -71,7 +71,7 @@ The server is the trust boundary: it verifies identity and household membership,
 - **Calendar:** household settings and date labels behind a replaceable adapter; errors are distinct from an empty result.
 - **Operations:** scheduled jobs, observability, backups, restore, export, and deletion.
 
-These are logical boundaries in one deployable application, not a commitment to microservices. Framework routes and database schema are implementation details to select after the decision gates.
+These are logical boundaries in one deployable application, not a commitment to microservices. Framework routes and database schema remain implementation details to select after the relevant decision gates.
 
 ## 4. Data ownership and lifecycle
 
@@ -106,11 +106,11 @@ All private business records carry or derive a household ownership boundary. Pro
 
 **Confirmed:** Preserve checked and on-hand states when safe. When a quantity or ingredient change makes a prior state uncertain, retain it for context and mark it as needing review. Do not present it as conclusively purchased or covered until a household member resolves the review.
 
-**Decision required before building reconciliation:** define durable item identity when lines merge or split, what an override means after recalculation, how prior states carry across changed groups, and how the user resolves flags. This contract deliberately does not imply that preserving a flag is equivalent to preserving the user's intent.
+**Detailed contract:** [ADR-0004](adr/0004-shopping-list-reconciliation.md) defines durable identity, merge and split behavior, overrides, review resolution, and examples. Retaining prior state for context does not preserve it as an active decision.
 
 ## 6. Scheduled suggestions and calendar
 
-**Suggested architecture, not yet an approved algorithm:** a durable scheduler invokes server-side generation for the upcoming local-Monday week at Sunday noon in the household's configured time zone. Store a unique job key per household and target week, claim work safely, and record attempts and failures. A duplicate invocation is harmless. Plan creation and updates use concurrency protection; generation must not replace a finalized plan or edited/locked choices. A manual retry follows the same safety rules. Define how to fill remaining slots, rank rated versus unrated recipes, handle insufficient candidates, and report failure before implementing the generator. Define missed runs, retry window, time-zone changes and daylight-saving behavior with the scheduler choice.
+**Accepted scheduling behavior, with implementation and selection algorithm still open:** a scheduler invokes server-side generation for the upcoming local-Monday week at Sunday noon in the household's configured time zone. Store a unique job key per household and target week, claim work safely, and record attempts and failures. A duplicate invocation is harmless. Plan creation and updates use concurrency protection; generation must not replace a finalized plan or edited/locked choices. A manual retry follows the same safety rules. Define how to fill remaining slots, rank rated versus unrated recipes, handle insufficient candidates, and report failure before implementing the generator. Define missed runs, retry window, time-zone changes and daylight-saving behavior with the scheduler choice.
 
 Calendar calculations should take local dates, configured time zone, Israel/diaspora setting, and an explicit observance policy. Represent preceding evenings and overlapping or multi-day occasions as separate displayable labels. Treat unavailable data as an error state, not an empty calendar, and allow planning to continue. Evaluate a library or provider, its data coverage, attribution and operational behavior before selection. Location-based times and their conventions are explicitly undecided; do not fabricate defaults or times.
 
@@ -127,11 +127,11 @@ Calendar calculations should take local dates, configured time zone, Israel/dias
 
 | Priority / gate | Decision or investigation | Why it matters |
 | --- | --- | --- |
-| Before foundation implementation | Choose framework, hosting, database, auth provider, and deployment environment; agree budget and custom-domain needs. | Determines infrastructure, identity integration, and operational model. |
+| Before foundation implementation | Choose the local authentication solution, Pi deployment and development workflow, local HTTPS and DNS. | Makes the accepted Pi, Next.js, PostgreSQL and local-account direction operable. Cloud provider, budget and domain remain later decisions. |
 | Before private data or launch | Define the two account identifiers, secure bootstrap, recovery, revocation and shared-device behavior. | Prevents accidental lockout or unauthorized access. |
 | Before plan/list implementation | Design cutoff enforcement and historical meal-plan/recipe preservation under the existing local-Monday, read-only policy; decide whether to simplify historical recipe content, and specify archive behavior. | Keeps past plans readable without requiring historical shopping-list snapshots. |
 | Before list implementation | Decide whether users maintain lists for multiple upcoming weeks, list retention, and whether a fully editable list is available before finalization. | Defines selected-week behavior without assuming one storage model. The current design creates a list at finalization and permits a labeled draft preview. |
-| Before list reconciliation | Specify safe state preservation, merge/split identity, override semantics, prior-state carryover and review resolution, with examples. | Makes current-list recalculation testable; uncertain on-hand/check states require review. |
+| Before list reconciliation | Implement and verify the identity, merge/split, override and review contract in [ADR-0004](adr/0004-shopping-list-reconciliation.md). | Makes current-list recalculation testable; uncertain on-hand/check states require review. |
 | Before concurrent editing | Decide conflict UX and stale-edit recovery for both users. | Prevents silent loss of household edits. |
 | Before suggestions | Decide collective versus individual ratings, balancing of conflicting or absent ratings, eligible recipes, edited-slot protection and regeneration behavior. | Enables a predictable algorithm without inventing preferences. |
 | Before scheduled generation | Select scheduler; define retries, missed runs, time-zone changes, monitoring and recovery. | Establishes the Sunday guarantee and safe retry behavior. |
@@ -151,4 +151,4 @@ Verification should include the PRD's cup-plus-half-cup, volume-versus-weight, o
 
 ## 10. Handoff
 
-**Next action:** review the decision register with the household and choose the initial deployment and identity constraints and list reconciliation examples. Then turn the accepted choices into implementation contracts and small, testable tasks for the manual vertical slice. Keep unresolved product choices visible rather than treating the proposals in this document as approved requirements.
+**Next action:** resolve the remaining foundation and first-slice gates, and turn the accepted choices into small, testable tasks for the manual vertical slice. Keep unresolved product choices visible rather than treating the proposals in this document as approved requirements.

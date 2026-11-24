@@ -3,7 +3,7 @@
 **Status:** Planning; no application has been built.  
 **Updated:** 2026-11-23
 
-This backlog turns the [PRD](PRD.md), [architecture document](ARCHITECT.md) and [accepted ADRs](adr/README.md) into an ordered starting point. It is a planning document, not authorization to begin implementation. Estimates and detailed task breakdowns remain open.
+This backlog is also tracked in [GitHub issues](https://github.com/et-nat1995/home-meal-planner/issues). It turns the [PRD](PRD.md), [architecture document](ARCHITECT.md) and [accepted ADRs](adr/README.md) into an ordered starting point. It is a planning document, not authorization to begin implementation. Estimates and detailed task breakdowns remain open.
 
 ## Priorities and dependencies
 
@@ -24,7 +24,7 @@ The first usable vertical slice is manual recipe entry → editable weekly plan 
 **Depends on:** PRD and ADRs; can be discussed alongside item 1.
 
 - Specify recipe revision and local-Monday cutoff behavior, including enforcement when no job runs exactly at midnight and how time-zone changes affect existing weeks.
-- Specify shopping-item identity, merge and split cases, override semantics, carryover and review resolution. Use examples for changed quantities, on-hand states and check-offs.
+- Apply the shopping-item identity, merge/split, override and review examples in [ADR-0004](adr/0004-shopping-list-reconciliation.md); validate them with the household.
 - Decide stale-edit conflict and recovery behavior, archive behavior, and whether lists for multiple future weeks are maintained. Confirm whether a draft has only a preview or an editable list.
 
 **Done when:** The architect and household can evaluate concrete examples and the invariants are precise enough to test. Preserve the confirmed historical policy and ADR-0004 unless a new decision changes them.
