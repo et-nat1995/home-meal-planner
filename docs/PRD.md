@@ -59,7 +59,7 @@ Each imported or manually entered recipe is stored in the app in one consistent,
 
 A week is identified by its local Monday date. Show one recipe or free-form dinner entry for each Monday–Thursday slot. Multiple recipe dishes per dinner and automatic serving scaling are later features; use the recipe’s initially entered quantities for the MVP. Each recipe dinner links to its stored ingredients and steps. Users can assign an existing recipe, replace or remove a planned item, or replace it with a flexible note such as leftovers, eating out, or adults going out while the kids have pizza. A free-form note such as “kids have pizza” does not create shopping ingredients automatically; the family can add them manually. Show all seven days and automatically identify Shabbat and Jewish holidays, including holidays that fall on weekdays. Shabbat should be visible for Friday evening and Saturday; label holiday dates and the preceding evening so the meal-planning view does not suggest that an occasion begins at midnight. Identify overlapping and multi-day occasions without hiding either label. Detailed occasion planning is future work. Maintain previous weeks for reference.
 
-**Confirmed lifecycle decision:** A week remains editable until 12:00 a.m. on the following Monday in the household’s configured time zone. It then becomes historical and read-only. Preserve its plan, recipe content, and shopping-list state as they stood at that cutoff; later recipe edits must not rewrite them. Future weeks remain editable before their own cutoff.
+**Confirmed lifecycle decision:** A week remains editable until 12:00 a.m. on the following Monday in the household’s configured time zone. It then becomes historical and read-only. Preserve its plan and recipe content as they stood at that cutoff; later recipe edits must not rewrite them. Future weeks remain editable before their own cutoff. Historical shopping-list snapshots are not required for the MVP.
 
 **Sunday workflow:**
 
@@ -79,7 +79,7 @@ Start with all ingredients needed, then let the family mark whole items already 
 
 A generated list separates calculated contributions from user additions and overrides. Users can add an item, edit or exclude a calculated item, and check items off. When a meal changes, recalculate calculated contributions, preserve manual items, and flag overrides or check-offs affected by changed quantities for review rather than silently discarding them. Display which meals contribute to an item. Persistent pantry inventory and package-size rounding are future decisions, not assumptions.
 
-**Confirmed update decision:** Changes to recipes used in editable weeks and changes to finalized plans automatically update affected calculated shopping-list contributions. When a quantity change affects an on-hand or checked-off item, retain its previous state for context and mark it as needing review; do not present it as conclusively covered or purchased until a household member resolves the review. How overrides and review states behave when groups merge or split remains open.
+**Confirmed update decision:** Adding, removing, replacing, or editing planned recipes automatically recalculates the relevant shopping list from the latest planned recipes and ingredient quantities. Manual additions survive recalculation. Preserve checked-off and on-hand states when safe. When a quantity or ingredient change makes a prior state uncertain, retain it for context and mark it as needing review; do not present it as conclusively covered or purchased until a household member resolves the review. How overrides and review states behave when groups merge or split remains open. The MVP focuses on the selected planning week's active list; historical list snapshots and complex historical reconciliation are not required.
 
 **Acceptance examples:**
 
@@ -107,7 +107,7 @@ Proposed core entities:
 - **Public recipe projection (future):** unauthenticated read-only recipe pages, separated from private household data; publication scope remains undecided.
 - **Recipe, recipe ingredient, source:** editable library record and original source; archive instead of deleting referenced data.
 - **Recipe preference, characteristics, and weekly planning input:** adult 1–5 and kids’ yes/no ratings; unknown ratings stay unknown. Extensible characteristics and future weekly filters; weighting is open.
-- **Plan, meal slot, planned item:** dated slots, recipe references or free-form items, servings, and lock state; plan lifecycle includes draft and finalized. Active plans follow recipe updates; retain historical versions for past weeks.
+- **Plan, meal slot, planned item:** dated slots, recipe references or free-form items, servings, and lock state; plan lifecycle includes draft and finalized. Editable plans follow recipe updates; preserve historical meal plans and recipe content under the confirmed lifecycle policy, without requiring historical shopping-list versions.
 - **Calendar settings:** household time zone and Israel/diaspora schedule; proposed optional location (US ZIP code or place), resolved time zone, and candle-lighting and ending-time conventions. Location belongs to the private household; expose it to a calendar provider only as needed.
 - **Scheduled generation:** a time-zone-aware Sunday noon job with retry/idempotency and failure visibility; must preserve household edits and finalized plans.
 - **Shopping list, calculated contribution, manual item, category, on-hand and shopping check state:** derived ingredient contributions and user changes kept distinct.
@@ -129,8 +129,8 @@ The backend owns access checks, persistence, import orchestration, ingredient no
 ## 7. Delivery milestones
 
 1. **Foundation:** resolve product questions and record architecture decisions; set up application, database, auth, and deployment approach.
-2. **Vertical slice:** manual recipes → manually editable weekly plan → accurate, traceable shopping list. Verify core arithmetic and update behavior with automated tests.
-3. **Suggestions and intake:** add ratings, scheduled Sunday noon draft generation, finalization, locks, and a secure AI-assisted intake path with review and manual fallback. Investigate source support and integration feasibility; defer detailed weighted filters.
+2. **Vertical slice:** manual recipes → manually editable weekly plan → explicit finalization and an accurate, traceable shopping list. Verify core arithmetic and update behavior with automated tests.
+3. **Suggestions and intake:** add ratings, scheduled Sunday noon draft generation, locks, and a secure AI-assisted intake path with review and manual fallback. Investigate source support and integration feasibility; defer detailed weighted filters.
 4. **Household trial:** use for several weeks, collect corrections and friction, and prioritize improvements.
 5. **Occasion planning:** design Shabbat and chagim workflows with the family based on actual examples before implementation.
 
@@ -145,6 +145,10 @@ Each milestone should be reviewable and committed at a meaningful boundary. No p
 5. Confirm the Israel or diaspora holiday schedule and which minor or modern observances should appear. Should holiday labels affect dinner suggestions, or remain informational? Confirm whether location-based candle-lighting and ending times are needed for the MVP, and which timing conventions the family follows.
 6. Which hosting, database, scheduler, and AI providers meet the desired low cost and custom-domain needs? Should Sunday generation trigger a notification?
 7. When the public library is prioritized, which recipes and fields should be published, and how should source rights be handled?
+8. Should users be able to maintain shopping lists for multiple upcoming weeks, and how long should those lists be retained? The selected week is the focus; this does not decide the storage model.
+9. Should historical meal plans continue to show recipe content as it was at the cutoff, or show current recipe content? The former is the existing confirmed policy; changing it would further simplify history but requires a product decision.
+10. Which ingredient and quantity changes allow checked-off and on-hand states to carry forward safely? Define merge/split and quantity-override behavior with examples. Unchanged ingredient identity and quantity are a possible starting point, not an approved rule.
+11. Should a fully editable shopping list be available before finalization? The current behavior is a finalized list with an optional clearly labeled draft preview.
 
 ## 9. Handoff
 

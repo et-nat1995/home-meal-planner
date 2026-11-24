@@ -16,8 +16,8 @@ The manual vertical slice can be specified first, but implementation should foll
 | Area | Assessment | Evidence and remaining work |
 | --- | --- | --- |
 | Users and outcome | Strong for a household trial | Two household members, private planning, and a four-week qualitative validation are defined. Numeric targets are intentionally deferred until a baseline exists. |
-| First journey and scope | Mostly clear | Manual recipes, four dinner slots, finalization, and a traceable list form a coherent slice. The milestones place finalization after the vertical slice, although the list is defined as generated on finalization; resolve sequencing below. |
-| Recipe and plan lifecycle | Cutoff and read-only policy confirmed | Editable weeks follow recipe edits; each becomes historical at the following local Monday midnight and is read-only. Snapshot implementation and archive behavior still need design. |
+| First journey and scope | Mostly clear | Manual recipes, four dinner slots, finalization, and a traceable list form a coherent slice. Finalization is included in the manual vertical slice. |
+| Recipe and plan lifecycle | Cutoff and read-only policy confirmed | Editable weeks follow recipe edits; each becomes historical at the following local Monday midnight and is read-only. Historical recipe content remains preserved under the existing policy; whether to simplify that policy and archive behavior remain open. |
 | Shopping list | Needs a detailed contract | Good arithmetic examples and preservation requirements exist; item identity, conflicts, and review resolution across recalculation are not specified. |
 | Identity and privacy | Architecture direction clear; launch policy open | Two authorized identities and server enforcement are required. Provisioning, recovery, session behavior, and provider remain open. |
 | Suggestions and scheduling | Needs product and operational decisions | Time zone, idempotency, locks, and no-overwrite behavior are stated; rating policy, retries, missed schedules, and partially edited drafts need precise rules. |
@@ -25,7 +25,7 @@ The manual vertical slice can be specified first, but implementation should foll
 | Intake and external services | Discovery required | Supported sources, integration feasibility, provider, retention, and costs remain open. Manual entry is viable independently. |
 | Operations and quality | Direction established; targets open | Backup/restore, export/deletion, accessibility, and privacy are identified, but service levels, recovery targets, budget, and operational ownership are unchosen. |
 
-**Milestone clarification proposed:** include explicit finalization and the resulting list in the manual vertical slice, because they are necessary to exercise the stated core journey. Defer automatic suggestions, scheduling, and AI intake to the next milestone. This is a sequencing recommendation, not a change to product scope.
+**Milestone clarification:** explicit finalization and the resulting list are included in the manual vertical slice, because they are necessary to exercise the stated core journey. Defer automatic suggestions, scheduling, and AI intake to the next milestone.
 
 ## 2. Capability and boundaries
 
@@ -36,7 +36,7 @@ Two authorized household members maintain a private recipe library, assemble a M
 - Only authorized household members can use private features; enforcement occurs on the server for every operation. Household data is private by default.
 - A week is identified by its local Monday. There is at most one weekly plan for the household; the Sunday run targets the upcoming week. A finalized plan or a household member's edits must never be overwritten by automatic generation.
 - Recipes are stored as editable content, not just external links; archived recipes remain readable in referenced plans. Unknown ratings and quantities remain unknown.
-- Editable weeks reflect recipe changes. At 12:00 a.m. on the following Monday in the household’s configured time zone, a week becomes historical and read-only; its plan, recipe content, and list state remain as of the cutoff.
+- Editable weeks reflect recipe changes. At 12:00 a.m. on the following Monday in the household’s configured time zone, a week becomes historical and read-only; its plan and recipe content remain as of the cutoff under the existing policy. Historical shopping-list snapshots are not required for the MVP.
 - Sum only confidently identical ingredients in compatible units. Preserve source lines and precision; do not infer volume-to-weight conversion or quantities. Keep ambiguous entries separate.
 - Calculated shopping contributions and user changes are distinct. Recalculation preserves manual items and flags affected overrides, on-hand states, and check-offs for review.
 - External content is untrusted. Extracted recipes are drafts until reviewed and saved; failure has a manual fallback.
@@ -66,7 +66,7 @@ The server is the trust boundary: it verifies identity and household membership,
 
 - **Identity and household:** session verification, explicit account provisioning, authorization, and recovery.
 - **Recipe library:** recipes, ingredients, ordered steps, ratings, sources, and archival; optional import drafts and private assets later.
-- **Planning:** week and slot lifecycle, user edits, locks, finalization, snapshots, and suggestion orchestration.
+- **Planning:** week and slot lifecycle, user edits, locks, finalization, historical meal-plan preservation, and suggestion orchestration.
 - **Shopping:** normalized ingredient identities, unit rules, per-meal contributions, user-owned changes, and review state.
 - **Calendar:** household settings and date labels behind a replaceable adapter; errors are distinct from an empty result.
 - **Operations:** scheduled jobs, observability, backups, restore, export, and deletion.
@@ -82,7 +82,7 @@ All private business records carry or derive a household ownership boundary. Pro
 | User, household, membership | Stable provider identity mapped to an explicitly authorized household membership; session authentication is separate from authorization. |
 | Recipe and revision | Editable title, ingredients, instructions, optional fields, original ingredient text, and source metadata. Immutable revisions or equivalent snapshots support historical plans. Archive excludes new suggestions without deleting referenced content. |
 | Week plan, slot, planned item | Unique `(household, local Monday)`; four dinner slots initially. A slot holds a recipe reference or free-form note, plus lock and edit metadata. Plan is draft or finalized; changes after finalization remain possible. |
-| Shopping list and contribution | One current finalized list per plan, with contributions keyed to a specific slot and ingredient line, including original values and normalized identity where known. User additions and overrides have separate ownership and lifecycle. |
+| Shopping list and contribution | The relevant current list has contributions keyed to a specific slot and ingredient line, including original values and normalized identity where known. User additions and overrides have separate ownership and lifecycle. Whether to maintain lists for multiple upcoming weeks and their retention remain open. |
 | Calendar settings | Household time zone and Israel/diaspora schedule; optional location and timing conventions only if approved. |
 | Import draft and asset | Future reviewable extraction result, status and source, with private optional asset and deletion policy. Drafts are not recipes until saved by an authorized user. |
 | Job run | Household, target week, schedule, status, attempt and failure information sufficient for safe retry and visibility. |
@@ -91,8 +91,8 @@ All private business records carry or derive a household ownership boundary. Pro
 
 1. A household member creates or edits recipes and enters or changes a draft plan. A draft may display a clearly labeled list preview.
 2. Finalization records the current plan and produces its shopping list atomically. Finalization is explicit and does not lock future edits.
-3. A later plan or active recipe edit recomputes affected contributions and marks affected user states for review in the same transaction. Manual items survive.
-4. At 12:00 a.m. on the Monday following the planned week, in the household’s configured time zone, that week becomes historical and read-only. Preserve the plan, recipe content, and shopping-list state as of the cutoff. Future weeks remain editable before their own cutoff. The implementation must enforce the boundary even if snapshot processing is delayed; the snapshot mechanism remains a design choice.
+3. Adding, removing, replacing, or editing planned recipes recomputes affected contributions in the relevant list. Preserve manual items and safe checked/on-hand states; flag uncertain states for review. Changes and recalculation occur in the same transaction.
+4. At 12:00 a.m. on the Monday following the planned week, in the household’s configured time zone, that week becomes historical and read-only. Preserve the plan and recipe content as of the cutoff under the existing policy; whether historical plans should instead show current recipe content remains open. Future weeks remain editable before their own cutoff. Historical shopping-list snapshots and complex historical reconciliation are not required for the MVP, and immutable list history solely for audit is unnecessary.
 
 **Proposed concurrency rule:** use a plan/list revision or equivalent optimistic concurrency check. A stale edit receives a conflict and can be refreshed or reconciled rather than silently overwriting another member's work. Finalization and subsequent recalculation should be transactional; retries must not create duplicate plans or lists.
 
@@ -104,7 +104,7 @@ All private business records carry or derive a household ownership boundary. Pro
 4. Aggregate calculated contributions into displayed list items with source meals. Apply manual additions, exclusions, quantity overrides, category corrections, on-hand state, and shopping check state separately. On-hand and purchased are distinct states.
 5. On change, recompute from source contributions. Compare prior and new group membership and quantities; retain manual entries and flag affected user states for review. The UI must show enough old/new context for the family to resolve a change without silently losing its edits.
 
-**Confirmed:** When a quantity change affects a checked or on-hand item, retain its prior state for context and mark it as needing review. Do not present it as conclusively purchased or covered until a household member resolves the review.
+**Confirmed:** Preserve checked and on-hand states when safe. When a quantity or ingredient change makes a prior state uncertain, retain it for context and mark it as needing review. Do not present it as conclusively purchased or covered until a household member resolves the review.
 
 **Decision required before building reconciliation:** define durable item identity when lines merge or split, what an override means after recalculation, how prior states carry across changed groups, and how the user resolves flags. This contract deliberately does not imply that preserving a flag is equivalent to preserving the user's intent.
 
@@ -129,8 +129,9 @@ Calendar calculations should take local dates, configured time zone, Israel/dias
 | --- | --- | --- |
 | Before foundation implementation | Choose framework, hosting, database, auth provider, and deployment environment; agree budget and custom-domain needs. | Determines infrastructure, identity integration, and operational model. |
 | Before private data or launch | Define the two account identifiers, secure bootstrap, recovery, revocation and shared-device behavior. | Prevents accidental lockout or unauthorized access. |
-| Before plan/list implementation | Design cutoff enforcement and snapshots for the confirmed local-Monday, read-only history policy; specify archive behavior. | Preserves the state at the cutoff even when processing is delayed. |
-| Before list reconciliation | Specify merge/split identity, override semantics, prior-state carryover and review resolution, with examples. | Makes preservation and recalculation testable; affected on-hand/check states already require review. |
+| Before plan/list implementation | Design cutoff enforcement and historical meal-plan/recipe preservation under the existing local-Monday, read-only policy; decide whether to simplify historical recipe content, and specify archive behavior. | Keeps past plans readable without requiring historical shopping-list snapshots. |
+| Before list implementation | Decide whether users maintain lists for multiple upcoming weeks, list retention, and whether a fully editable list is available before finalization. | Defines selected-week behavior without assuming one storage model. The current design creates a list at finalization and permits a labeled draft preview. |
+| Before list reconciliation | Specify safe state preservation, merge/split identity, override semantics, prior-state carryover and review resolution, with examples. | Makes current-list recalculation testable; uncertain on-hand/check states require review. |
 | Before concurrent editing | Decide conflict UX and stale-edit recovery for both users. | Prevents silent loss of household edits. |
 | Before suggestions | Decide collective versus individual ratings, balancing of conflicting or absent ratings, eligible recipes, edited-slot protection and regeneration behavior. | Enables a predictable algorithm without inventing preferences. |
 | Before scheduled generation | Select scheduler; define retries, missed runs, time-zone changes, monitoring and recovery. | Establishes the Sunday guarantee and safe retry behavior. |
@@ -142,11 +143,11 @@ Calendar calculations should take local dates, configured time zone, Israel/dias
 ## 9. Delivery and verification
 
 1. **Architecture and foundation:** resolve the first gates; record decisions and tradeoffs, configure local/deployment environments and migrations, and establish authorized access. No production launch is implied.
-2. **Manual vertical slice:** recipe entry and archival; a local-week plan with manual slots and explicit finalization; list generation, traceability, manual additions and reconciliation; historical preservation under the agreed policy. Exercise the full flow on mobile and desktop.
+2. **Manual vertical slice:** recipe entry and archival; a local-week plan with manual slots and explicit finalization; list generation, traceability, manual additions and current-list reconciliation; read-only previous meal plans under the agreed policy. Historical shopping-list snapshots are not required. Exercise the full flow on mobile and desktop.
 3. **Broader first release:** calendar labels; ratings and scheduled suggestions with locks and safe retries; then selected intake sources with review and fallback. Sequence each only after its gates are resolved.
 4. **Household trial:** use real recipes over four weeks and record planning time, quantity corrections, import edits, and friction against a baseline. Design occasion planning from actual family workflows afterward.
 
-Verification should include the PRD's cup-plus-half-cup, volume-versus-weight, onion-versus-onion-powder, and plan-change examples; fractional precision; ambiguous quantities; source traceability; list merge/split and user-state review; recipe edit/archive and historical snapshots; authorization across household boundaries; concurrent edits; and transaction rollback. For the scheduled and calendar milestones, test duplicate runs, edited/finalized plans, insufficient candidates, local-time transitions, overlapping holidays, and provider failure. Test import security and review-before-save only when intake is built. Validate backup restoration before launch.
+Verification should include the PRD's cup-plus-half-cup, volume-versus-weight, onion-versus-onion-powder, and plan-change examples; fractional precision; ambiguous quantities; source traceability; current-list merge/split and user-state review; recipe edit/archive and read-only historical meal plans under the agreed recipe-content policy; authorization across household boundaries; concurrent edits; and transaction rollback. For the scheduled and calendar milestones, test duplicate runs, edited/finalized plans, insufficient candidates, local-time transitions, overlapping holidays, and provider failure. Test import security and review-before-save only when intake is built. Validate backup restoration before launch.
 
 ## 10. Handoff
 
